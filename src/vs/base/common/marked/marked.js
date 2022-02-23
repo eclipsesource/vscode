@@ -2945,5 +2945,5 @@
 
 // ESM-uncomment-begin
 // })();
-// export var marked = (__marked_exports || exports);
+// module.exports = {marked: (__marked_exports || exports)};
 // ESM-uncomment-end

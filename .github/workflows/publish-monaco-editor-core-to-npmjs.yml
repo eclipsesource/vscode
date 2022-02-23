@@ -1,0 +1,42 @@
+name: publish-monaco-editor-core-to-npmjs.org
+on:
+  push:
+    branches:
+      - monaco-editor-core-publish
+      - monaco-uplift-2-2022
+env:
+  NODE_OPTIONS: --max-old-space-size=8192
+jobs:
+  linux:
+    name: Publish monaco-editor-core to NPM
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v2
+      # should be aligned with ./ci.yml#L22-L32
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0 libgbm1
+          sudo cp build/azure-pipelines/linux/xvfb.init /etc/init.d/xvfb
+          sudo chmod +x /etc/init.d/xvfb
+          sudo update-rc.d xvfb defaults
+          sudo service xvfb start
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org/'
+          scope: '@theia'
+          token: ${{ secrets.NPM_TOKEN }}
+      - run: cat /home/runner/work/_temp/.npmrc
+        name: check npmrc
+      - run: rm -rf ~/.cache/node-gyp/
+        name: Remove node-gyp
+      - run: yarn --frozen-lockfile --network-timeout 180000
+        name: Install dependencies
+      - run: gulp editor-distro
+        name: Prepare distribution
+      - run: npm publish ./out-monaco-editor-core --access public --tag alpha
+        name: Publish to NPM
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
