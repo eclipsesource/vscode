@@ -5629,6 +5629,16 @@ declare namespace monaco.languages {
 	export function registerHoverProvider(languageSelector: LanguageSelector, provider: HoverProvider): IDisposable;
 
 	/**
+	 * Register an evaluatable expression provider that locates evaluatable expressions in text documents.
+	 */
+	export function registerEvaluatableExpressionProvider(languageSelector: LanguageSelector, provider: EvaluatableExpressionProvider): IDisposable;
+
+	/**
+	 * Register an invline values provider that returns data for the debugger's 'inline value' feature.
+	 */
+	export function registerInlineValuesProvider(languageSelector: LanguageSelector, provider: InlineValuesProvider): IDisposable;
+
+	/**
 	 * Register a document symbol provider (used by e.g. outline).
 	 */
 	export function registerDocumentSymbolProvider(languageSelector: LanguageSelector, provider: DocumentSymbolProvider): IDisposable;
@@ -6055,6 +6065,95 @@ declare namespace monaco.languages {
 		 * to the word range at the position when omitted.
 		 */
 		provideHover(model: editor.ITextModel, position: Position, token: CancellationToken): ProviderResult<Hover>;
+	}
+
+	/**
+	 * An evaluatable expression represents additional information for an expression in a document. Evaluatable expressions are
+	 * evaluated by a debugger or runtime and their result is rendered in a tooltip-like widget.
+	 */
+	export interface EvaluatableExpression {
+		/**
+		 * The range to which this expression applies.
+		 */
+		range: IRange;
+		/**
+		 * This expression overrides the expression extracted from the range.
+		 */
+		expression?: string;
+	}
+
+	/**
+	 * The evaluatable expression provider interface defines the contract between extensions and
+	 * the debug hover.
+	 */
+	export interface EvaluatableExpressionProvider {
+		/**
+		 * Provide a hover for the given position and document. Multiple hovers at the same
+		 * position will be merged by the editor. A hover can have a range which defaults
+		 * to the word range at the position when omitted.
+		 */
+		provideEvaluatableExpression(model: editor.ITextModel, position: Position, token: CancellationToken): ProviderResult<EvaluatableExpression>;
+	}
+
+	/**
+	 * A value-object that contains contextual information when requesting inline values from a InlineValuesProvider.
+	 */
+	export interface InlineValueContext {
+		frameId: number;
+		stoppedLocation: Range;
+	}
+
+	/**
+	 * Provide inline value as text.
+	 */
+	export interface InlineValueText {
+		type: 'text';
+		range: IRange;
+		text: string;
+	}
+
+	/**
+	 * Provide inline value through a variable lookup.
+	 */
+	export interface InlineValueVariableLookup {
+		type: 'variable';
+		range: IRange;
+		variableName?: string;
+		caseSensitiveLookup: boolean;
+	}
+
+	/**
+	 * Provide inline value through an expression evaluation.
+	 */
+	export interface InlineValueExpression {
+		type: 'expression';
+		range: IRange;
+		expression?: string;
+	}
+
+	/**
+	 * Inline value information can be provided by different means:
+	 * - directly as a text value (class InlineValueText).
+	 * - as a name to use for a variable lookup (class InlineValueVariableLookup)
+	 * - as an evaluatable expression (class InlineValueEvaluatableExpression)
+	 * The InlineValue types combines all inline value types into one type.
+	 */
+	export type InlineValue = InlineValueText | InlineValueVariableLookup | InlineValueExpression;
+
+	/**
+	 * The inline values provider interface defines the contract between extensions and
+	 * the debugger's inline values feature.
+	 */
+	export interface InlineValuesProvider {
+		/**
+		 */
+		onDidChangeInlineValues?: IEvent<void> | undefined;
+		/**
+		 * Provide the "inline values" for the given range and document. Multiple hovers at the same
+		 * position will be merged by the editor. A hover can have a range which defaults
+		 * to the word range at the position when omitted.
+		 */
+		provideInlineValues(model: editor.ITextModel, viewPort: Range, context: InlineValueContext, token: CancellationToken): ProviderResult<InlineValue[]>;
 	}
 
 	export enum CompletionItemKind {
